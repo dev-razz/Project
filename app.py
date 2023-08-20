@@ -19,8 +19,8 @@ RTC_CONFIGURATION = RTCConfiguration(
 {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]})
 webrtc_streamer(
     key="pose-estimation",
-    # mode=WebRtcMode.SENDRECV,
-    # rtc_configuration=RTC_CONFIGURATION,
+    mode=WebRtcMode.SENDRECV,
+    rtc_configuration=RTC_CONFIGURATION,
     video_processor_factory=PoseEstimationProcessor,
     media_stream_constraints={"video": True, "audio": False},
     async_processing=True
