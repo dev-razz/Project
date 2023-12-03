@@ -11,6 +11,11 @@ pose = mp_pose.Pose(
 )
 pose_connections = mp_pose.POSE_CONNECTIONS
 mp_drawing = mp.solutions.drawing_utils
+excercise_type = "bicep"
+global counter
+global stage1
+counter = 0
+stage1 = 'down'
 
 joint_mapping = {
     'nose': mp_pose.PoseLandmark.NOSE.value,
@@ -59,8 +64,28 @@ def calculate_angle(a,b,c):
 
     return angle
 
-def exercise(joints,joint_angles,image):
-    global angles
+def counter_box():
+    global counter,stage1
+    # Render curl counter
+    # Setup status box
+    #cv2.rectangle(image, (0,0), (225,73), (245,117,16), -1)
+
+    # Rep data
+    cv2.putText(image, 'REPS', (15,12),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
+    cv2.putText(image, str(counter),
+                (10,60),
+                cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,0), 2, cv2.LINE_AA)
+
+    # Stage data
+    cv2.putText(image, 'STAGE', (65,12),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
+    cv2.putText(image, stage1,
+                (60,60),
+                cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,0), 2, cv2.LINE_AA)
+
+def exercise(joints,joint_angles):
+    global angles,joint_ids,coordinates
     landmarks = results.pose_landmarks.landmark
     h, w, _ = image.shape
     joint_ids = []
@@ -77,7 +102,8 @@ def exercise(joints,joint_angles,image):
     for joint_angle in joint_angles:
         angle = calculate_angle(coordinates[joint_angle[0]],coordinates[joint_angle[1]],coordinates[joint_angle[2]])
         angles[joint_angle[1]] = angle
-        cv2.putText(image, str(angle),tuple(np.multiply(coordinates[joint_angle[1]], [640, 480]).astype(int)),
+        cv2.putText(image, str(angle),
+                       tuple(np.multiply(coordinates[joint_angle[1]], [640, 480]).astype(int)),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
 
     # Draw circles on highlighted joints
@@ -85,23 +111,70 @@ def exercise(joints,joint_angles,image):
         landmark = landmarks[joint_mapping[joint]]
         cx, cy = int(landmark.x * w), int(landmark.y * h)
         cv2.circle(image, (cx, cy), 8, (0, 255, 0), -1)
+
+def bicep_curls(image):
+    global counter,stage1
+    #Define joints for particular exercise
+    joints = ["right_hip","right_shoulder","right_elbow","right_wrist"]
+    joint_angles = [["right_hip","right_shoulder","right_elbow"],["right_shoulder","right_elbow","right_wrist"]]
+    h, w, _ = image.shape
+    exercise(joints,joint_angles)
     # Draw lines between highlighted joints
     for connection in pose_connections:
         joint1, joint2 = connection
         if joint1 in joint_ids and joint2 in joint_ids:
-            landmark1 = landmarks[joint1]
-            landmark2 = landmarks[joint2]
+            landmark1 = results.pose_landmarks.landmark[joint1]
+            landmark2 = results.pose_landmarks.landmark[joint2]
             pt1 = (int(landmark1.x * w), int(landmark1.y * h))
             pt2 = (int(landmark2.x * w), int(landmark2.y * h))
-            cv2.line(image, pt1, pt2, (255, 0, 0), 2)
+            #print(pt1)
+            posture = 0
+            if angles['right_shoulder'] > 7 or (coordinates['right_shoulder'][0]-coordinates['right_hip'][0])>0.05 or (coordinates['right_shoulder'][0]-coordinates['right_hip'][0])<-0.05:
+                cv2.line(image, pt1, pt2, color2, 2)
+                posture = 0
+            else:
+                cv2.line(image, pt1, pt2, color1, 2)
+                posture = 1
+    if angles['right_elbow'] > 160 and posture==1:
+        stage1 = "down"
+    if angles['right_elbow'] < 30 and stage1 =="down" and posture==1:
+        stage1 = "up"
+        counter +=1
+    counter_box()
 
-def tracker(image):
+def dumbbell_rows(image):
+    joints = ["right_hip","right_shoulder","right_elbow","right_wrist"]
+    joint_angles = [["right_hip","right_shoulder","right_elbow"],["right_shoulder","right_elbow","right_wrist"]]
+    h, w, _ = image.shape
+    exercise(joints,joint_angles)
+    # Draw lines between highlighted joints
+    for connection in pose_connections:
+        joint1, joint2 = connection
+        if joint1 in joint_ids and joint2 in joint_ids:
+            landmark1 = results.pose_landmarks.landmark[joint1]
+            landmark2 = results.pose_landmarks.landmark[joint2]
+            pt1 = (int(landmark1.x * w), int(landmark1.y * h))
+            pt2 = (int(landmark2.x * w), int(landmark2.y * h))
+            #print(pt1)
+            if angles['right_shoulder'] > 7 or (coordinates['right_shoulder'][0]-coordinates['right_hip'][0])>0.05 or (coordinates['right_shoulder'][0]-coordinates['right_hip'][0])<-0.05:
+                cv2.line(image, pt1, pt2, color2, 2)
+            else:
+                cv2.line(image, pt1, pt2, color1, 2)
+
+def tracker(img,selected_exercise):
     global results
+    global image
+    global color1
+    global color2
+    color1 = (0, 255, 0)
+    color2 = (255, 0, 0)
+    image = img
     results = pose.process(image)
-    joints = ["right_hip", "right_shoulder", "right_elbow", "right_wrist"]
-    joint_angles = [["right_hip", "right_shoulder", "right_elbow"],["right_shoulder", "right_elbow", "right_wrist"]]
     try:
-        exercise(joints, joint_angles,image)
+        if selected_exercise == "bicep":
+            bicep_curls(image)
+        if selected_exercise == "dumbbell_rows":
+            dumbbell_rows(image)
     except Exception as e:
         print(e)
         pass
