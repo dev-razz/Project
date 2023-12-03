@@ -8,9 +8,9 @@ from twilio.rest import Client
 
 # Find your Account SID and Auth Token at twilio.com/console
 # and set the environment variables. See http://twil.io/secure
-account_sid = 'ACa8c8a3b595528eaaf5aebc2547600f81'
-auth_token = 'a849ad3fa7bae833be94c77c2b91d94a'
-ICE_SERVERS = Client(account_sid, auth_token).tokens.create().ice_servers
+# account_sid = 'ACa8c8a3b595528eaaf5aebc2547600f81'
+# auth_token = 'a849ad3fa7bae833be94c77c2b91d94a'
+# ICE_SERVERS = Client(account_sid, auth_token).tokens.create().ice_servers
 
 exercises = ["bicep","dumbbell_rows"]
 selected_exercise = st.selectbox("Choose an exercise:", exercises)
